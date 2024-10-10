@@ -4,11 +4,11 @@
 install_k6_if_needed() {
     if ! command -v k6 &> /dev/null; then
         echo "K6 is not installed. Installing K6..."
-        sudo gpg -k
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
-        sudo apt-get update
-        sudo apt-get install k6 -y
+        sudo gpg -k > /dev/null 2>&1
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 > /dev/null 2>&1
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list > /dev/null
+        sudo apt-get update > /dev/null 2>&1
+        sudo apt-get install k6 -y > /dev/null 2>&1
 
         if [ $? -ne 0 ]; then
             echo "Error: Failed to install K6. Please install it manually and try again."
@@ -19,6 +19,7 @@ install_k6_if_needed() {
         echo "K6 is already installed."
     fi
 }
+
 # Function to validate if a number is an integer
 validate_integer() {
     if ! [[ "$1" =~ ^[0-9]+$ ]]; then
@@ -89,7 +90,7 @@ create_k6_script_and_service() {
     # Create the K6 script
     k6_script_path="/root/$service_name.js"
     echo "Creating K6 script at $k6_script_path"
-    
+
     cat <<EOF > $k6_script_path
 import http from 'k6/http';
 
@@ -133,9 +134,9 @@ EOF
     fi
 
     # Reload systemd, enable and start the service
-    systemctl daemon-reload
-    systemctl enable $service_name.service
-    systemctl start $service_name.service
+    systemctl daemon-reload > /dev/null 2>&1
+    systemctl enable $service_name.service > /dev/null 2>&1
+    systemctl start $service_name.service > /dev/null 2>&1
 
     if [ $? -ne 0 ]; then
         echo "Error: Failed to start the service."
@@ -151,12 +152,12 @@ stop_k6_service() {
     service_name="${service_name%.service}"
     # Validate if service exists before stopping
     if service_exists $service_name; then
-        systemctl stop $service_name.service
-        systemctl disable $service_name.service
-        sudo systemctl reset-failed $service_name.service
+        systemctl stop $service_name.service > /dev/null 2>&1
+        systemctl disable $service_name.service > /dev/null 2>&1
+        sudo systemctl reset-failed $service_name.service > /dev/null 2>&1
         rm -rf /etc/systemd/system/$service_name.service
         rm -rf /root/$service_name.js
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null 2>&1
 
         if [ $? -ne 0 ]; then
             echo "Error: Failed to stop or disable the service."
@@ -193,7 +194,6 @@ list_k6_services() {
         done
     fi
 }
-
 
 # Main menu
 while true; do
