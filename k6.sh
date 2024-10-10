@@ -8,6 +8,14 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+logo() {
+    echo -e "${CYAN}*****************************************${NC}"
+    echo -e "${CYAN}*${NC}                                       ${CYAN}*${NC}"
+    echo -e "${CYAN}*${NC}          ${GREEN}M U H A M M A D${NC}              ${CYAN}*${NC}"
+    echo -e "${CYAN}*${NC}                                       ${CYAN}*${NC}"
+    echo -e "${CYAN}*****************************************${NC}"
+}
+
 # Function to install K6 if not installed
 install_k6_if_needed() {
     if ! command -v k6 &> /dev/null; then
@@ -236,36 +244,41 @@ list_k6_services() {
     fi
 }
 
-# Main menu
-while true; do
-    clear
-    echo -e "${BLUE}Select an option:${NC}"
-    echo "1. Create a new K6 script and service"
-    echo "2. Remove an existing K6 service"
-    echo "3. List all K6 services"
-    echo "4. Exit"
-    read -p "Enter your choice (1/2/3/4): " choice
+main_menu() {
+    while true; do
+        clear
+        logo
+        echo -e "${BLUE}Select an option:${NC}"
+        echo -e "${CYAN}1)${NC} Create a new K6 script and service"
+        echo -e "${CYAN}2)${NC} Remove an existing K6 service"
+        echo -e "${CYAN}3)${NC} List all K6 services"
+        echo -e "${CYAN}4)${NC} Exit"
+        echo -e "${BLUE}------------------------------------${NC}"
+        read -p "Enter your choice (1-4): " choice
 
-    case $choice in
-        1)
-            create_k6_script_and_service
-            read -p "Press Enter to continue"
-            ;;
-        2)
-            list_k6_services
-            stop_k6_service
-            read -p "Press Enter to continue"
-            ;;
-        3)
-            list_k6_services
-            read -p "Press Enter to continue"
-            ;;
-        4)
-            echo -e "${GREEN}Exiting.${NC}"
-            break
-            ;;
-        *)
-            echo -e "${RED}Invalid option. Please select 1, 2, 3, or 4.${NC}"
-            ;;
-    esac
-done
+        case $choice in
+            1)
+                create_k6_script_and_service
+                press_enter
+                ;;
+            2)
+                list_k6_services
+                stop_k6_service
+                press_enter
+                ;;
+            3)
+                list_k6_services
+                press_enter
+                ;;
+            4)
+                echo -e "${GREEN}Thank you for using the K6 Load Testing Management Tool. Goodbye!${NC}"
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}Invalid option. Please select 1, 2, 3, or 4.${NC}"
+                press_enter
+                ;;
+        esac
+    done
+}
+main_menu
