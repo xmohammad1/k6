@@ -65,7 +65,6 @@ service_exists() {
 
 # Function to create and modify K6 processes
 create_k6_script_and_service() {
-    clear
     # Install K6 if not already installed
     install_k6_if_needed
     # Ask user for inputs with validation
@@ -157,7 +156,6 @@ EOF
 
 # Function to stop an existing K6 service
 stop_k6_service() {
-    clear
     read -p "Enter the name of the service you want to stop: " service_name
     service_name="${service_name%.service}"
     # Validate if service exists before stopping
@@ -179,7 +177,6 @@ stop_k6_service() {
 
 # Function to list all K6 services
 list_k6_services() {
-    clear
     # List only units matching 'K6 Load Test Service' and remove empty lines
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
 
@@ -222,6 +219,7 @@ while true; do
             read -p "Press Enter to continue"
             ;;
         2)
+            list_k6_services
             stop_k6_service
             read -p "Press Enter to continue"
             ;;
