@@ -62,7 +62,24 @@ service_exists() {
         return 1
     fi
 }
-
+# Function to convert duration to seconds
+duration_to_seconds() {
+    local duration=$1
+    local seconds=0
+    if [[ $duration =~ ([0-9]+)s ]]; then
+        seconds=$((seconds + ${BASH_REMATCH[1]}))
+    fi
+    if [[ $duration =~ ([0-9]+)m ]]; then
+        seconds=$((seconds + ${BASH_REMATCH[1]} * 60))
+    fi
+    if [[ $duration =~ ([0-9]+)h ]]; then
+        seconds=$((seconds + ${BASH_REMATCH[1]} * 3600))
+    fi
+    if [[ $duration =~ ([0-9]+)d ]]; then
+        seconds=$((seconds + ${BASH_REMATCH[1]} * 86400))
+    fi
+    echo $seconds
+}
 # Function to create and modify K6 processes
 create_k6_script_and_service() {
     # Install K6 if not already installed
@@ -154,6 +171,10 @@ EOF
     fi
 
     echo -e "${GREEN}K6 service $service_name started and enabled.${NC}"
+    # Schedule service stop after the specified duration using systemd-run
+    seconds=$(duration_to_seconds "$duration")    
+    systemd-run --quiet --on-active="$seconds" /bin/sh -c "systemctl stop $service_name.service > /dev/null 2>&1 && systemctl disable $service_name.service > /dev/null 2>&1 && rm -f $service_file > /dev/null 2>&1 && rm -f $k6_script_path > /dev/null 2>&1 && systemctl daemon-reload > /dev/null 2>&1"
+    echo -e "${GREEN}Service $service_name scheduled to stop and disable after $duration.${NC}"
 }
 
 # Function to stop an existing K6 service
