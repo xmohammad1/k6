@@ -1,9 +1,17 @@
 #!/bin/bash
 
+# Color variables
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
 # Function to install K6 if not installed
 install_k6_if_needed() {
     if ! command -v k6 &> /dev/null; then
-        echo "K6 is not installed. Installing K6..."
+        echo -e "${YELLOW}K6 is not installed. Installing K6...${NC}"
         sudo gpg -k > /dev/null 2>&1
         sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 > /dev/null 2>&1
         echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list > /dev/null
@@ -11,19 +19,17 @@ install_k6_if_needed() {
         sudo apt-get install k6 -y > /dev/null 2>&1
 
         if [ $? -ne 0 ]; then
-            echo "Error: Failed to install K6. Please install it manually and try again."
+            echo -e "${RED}Error: Failed to install K6. Please install it manually and try again.${NC}"
             exit 1
         fi
-        echo "K6 installed successfully."
-    else
-        echo "K6 is already installed."
+        echo -e "${GREEN}K6 installed successfully.${NC}"
     fi
 }
 
 # Function to validate if a number is an integer
 validate_integer() {
     if ! [[ "$1" =~ ^[0-9]+$ ]]; then
-        echo "Error: '$1' is not a valid number."
+        echo -e "${RED}Error: '$1' is not a valid number.${NC}"
         return 1
     fi
     return 0
@@ -32,7 +38,7 @@ validate_integer() {
 # Function to validate duration format
 validate_duration() {
     if ! [[ "$1" =~ ^[0-9]+(s|m|h|d)$ ]]; then
-        echo "Error: '$1' is not a valid duration. Use formats like 30s, 1m, 2h, or 1d."
+        echo -e "${RED}Error: '$1' is not a valid duration. Use formats like 30s, 1m, 2h, or 1d.${NC}"
         return 1
     fi
     return 0
@@ -41,7 +47,7 @@ validate_duration() {
 # Function to validate URL
 validate_url() {
     if ! [[ "$1" =~ ^http(s)?:// ]]; then
-        echo "Error: '$1' is not a valid URL. It must start with http:// or https://."
+        echo -e "${RED}Error: '$1' is not a valid URL. It must start with http:// or https://.${NC}"
         return 1
     fi
     return 0
@@ -52,13 +58,14 @@ service_exists() {
     if systemctl list-units --type=service --all | grep -q "$1.service"; then
         return 0
     else
-        echo "Service '$1' does not exist."
+        echo -e "${RED}Service '$1' does not exist.${NC}"
         return 1
     fi
 }
 
 # Function to create and modify K6 processes
 create_k6_script_and_service() {
+    clear
     # Install K6 if not already installed
     install_k6_if_needed
     # Ask user for inputs with validation
@@ -81,15 +88,15 @@ create_k6_script_and_service() {
     service_name="${service_name%.service}"
     # Check if service already exists
     if service_exists $service_name; then
-        echo "A service with the name $service_name already exists. Please choose a different name."
+        echo -e "${RED}A service with the name $service_name already exists. Please choose a different name.${NC}"
         return
     else
-        echo "Creating a new service with the name: $service_name"
+        echo -e "${GREEN}Creating a new service with the name: $service_name${NC}"
     fi
 
     # Create the K6 script
     k6_script_path="/root/$service_name.js"
-    echo "Creating K6 script at $k6_script_path"
+    echo -e "${GREEN}Creating K6 script at $k6_script_path${NC}"
 
     cat <<EOF > $k6_script_path
 import http from 'k6/http';
@@ -105,13 +112,13 @@ export default function () {
 EOF
 
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to create K6 script."
+        echo -e "${RED}Error: Failed to create K6 script.${NC}"
         return 1
     fi
 
     # Create the systemd service file
     service_file="/etc/systemd/system/$service_name.service"
-    echo "Creating systemd service at $service_file"
+    echo -e "${GREEN}Creating systemd service at $service_file${NC}"
 
     cat <<EOF > $service_file
 [Unit]
@@ -129,7 +136,7 @@ WantedBy=multi-user.target
 EOF
 
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to create systemd service."
+        echo -e "${RED}Error: Failed to create systemd service.${NC}"
         return 1
     fi
 
@@ -139,15 +146,16 @@ EOF
     systemctl start $service_name.service > /dev/null 2>&1
 
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to start the service."
+        echo -e "${RED}Error: Failed to start the service.${NC}"
         return 1
     fi
 
-    echo "K6 service $service_name started and enabled."
+    echo -e "${GREEN}K6 service $service_name started and enabled.${NC}"
 }
 
 # Function to stop an existing K6 service
 stop_k6_service() {
+    clear
     read -p "Enter the name of the service you want to stop: " service_name
     service_name="${service_name%.service}"
     # Validate if service exists before stopping
@@ -160,26 +168,27 @@ stop_k6_service() {
         systemctl daemon-reload > /dev/null 2>&1
 
         if [ $? -ne 0 ]; then
-            echo "Error: Failed to stop or disable the service."
+            echo -e "${RED}Error: Failed to stop or disable the service.${NC}"
             return 1
         fi
-        echo "K6 service $service_name stopped and disabled."
+        echo -e "${GREEN}K6 service $service_name stopped and disabled.${NC}"
     fi
 }
 
 # Function to list all K6 services
 list_k6_services() {
+    clear
     # List only units matching 'K6 Load Test Service' and remove empty lines
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
 
     if [ -z "$services" ]; then
-        echo "|---------------------------------------------------------------|"
-        echo "|                         No active service found.              |"
-        echo "|---------------------------------------------------------------|"
+        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
+        echo "${RED}|                         No active service found.              |${NC}"
+        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
     else
-        echo "|---------------------------------------------------------------|"
-        echo "|   Service Name           |   Status       |   Active/Inactive |"
-        echo "|---------------------------------------------------------------|"
+        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|${NC}   Service Name           ${BLUE}|${NC}   Status       ${BLUE}|${NC}   Active/Inactive ${BLUE}|${NC}"
+        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
 
         echo "$services" | while read -r line; do
             # Remove leading special character, then parse using awk
@@ -189,15 +198,16 @@ list_k6_services() {
             is_active=$(systemctl is-active "$service_name")
 
             # Print the formatted output
-            printf "|   %-23s|   %-13s|   %-16s|\n" "$service_name" "$service_status" "$is_active"
-            echo "|---------------------------------------------------------------|"
+            printf "${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-16s${BLUE}|${NC}\n" "$service_name" "$service_status" "$is_active"
+            echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
         done
     fi
 }
 
 # Main menu
 while true; do
-    echo "Select an option:"
+    clear
+    echo -e "${BLUE}Select an option:${NC}"
     echo "1. Create a new K6 script and service"
     echo "2. Remove an existing K6 service"
     echo "3. List all K6 services"
@@ -218,11 +228,11 @@ while true; do
             read -p "Press Enter to continue"
             ;;
         4)
-            echo "Exiting."
+            echo -e "${GREEN}Exiting.${NC}"
             break
             ;;
         *)
-            echo "Invalid option. Please select 1, 2, 3, or 4."
+            echo -e "${RED}Invalid option. Please select 1, 2, 3, or 4.${NC}"
             ;;
     esac
 done
