@@ -55,7 +55,7 @@ validate_url() {
 
 # Function to validate if a service exists
 service_exists() {
-    if systemctl list-units --type=service --all | grep -q "$1.service"; then
+    if systemctl status "$1.service" &> /dev/null; then
         return 0
     else
         echo -e "${RED}Service '$1' does not exist.${NC}"
@@ -83,11 +83,13 @@ create_k6_script_and_service() {
         validate_url $url && break
     done
 
-    read -p "Enter a name for the K6 service: " service_name
-    service_name="${service_name%.service}"
     while true; do
         read -p "Enter a name for the K6 service: " service_name
         service_name="${service_name%.service}"
+        if [ -z "$service_name" ]; then
+            echo -e "${RED}Service name cannot be empty. Please enter a valid service name.${NC}"
+            continue
+        fi
         if service_exists $service_name &>/dev/null; then
             echo -e "${RED}A service with the name $service_name already exists. Please choose a different name.${NC}"
         else
@@ -155,24 +157,34 @@ EOF
 }
 
 # Function to stop an existing K6 service
+# Function to stop an existing K6 service
 stop_k6_service() {
-    read -p "Enter the name of the service you want to stop: " service_name
-    service_name="${service_name%.service}"
-    # Validate if service exists before stopping
-    if service_exists $service_name; then
-        systemctl stop $service_name.service > /dev/null 2>&1
-        systemctl disable $service_name.service > /dev/null 2>&1
-        sudo systemctl reset-failed $service_name.service > /dev/null 2>&1
-        rm -rf /etc/systemd/system/$service_name.service
-        rm -rf /root/$service_name.js
-        systemctl daemon-reload > /dev/null 2>&1
-
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}Error: Failed to stop or disable the service.${NC}"
-            return 1
+    local service_name
+    while true; do
+        read -p "Enter the name of the K6 service to stop: " service_name
+        service_name="${service_name%.service}"
+        if [ -z "$service_name" ]; then
+            echo -e "${RED}Service name cannot be empty. Please enter a valid service name.${NC}"
+        elif service_exists "$service_name"; then
+            break
         fi
-        echo -e "${GREEN}K6 service $service_name stopped and disabled.${NC}"
+    done
+
+    # Stop, disable, and remove the service and associated files
+    systemctl stop "$service_name.service" > /dev/null 2>&1
+    systemctl disable "$service_name.service" > /dev/null 2>&1
+    systemctl reset-failed "$service_name.service" > /dev/null 2>&1
+    rm -f "/etc/systemd/system/$service_name.service"
+    rm -f "/root/$service_name.js"
+    systemctl daemon-reload > /dev/null 2>&1
+
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Failed to stop or disable the service.${NC}"
+        return 1
     fi
+
+    echo -e "${GREEN}K6 service '$service_name' stopped and disabled successfully.${NC}"
+    return 0
 }
 
 # Function to list all K6 services
