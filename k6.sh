@@ -6,8 +6,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
-
 logo() {
     echo -e "${CYAN}*****************************************${NC}"
     echo -e "${CYAN}*${NC}                                       ${CYAN}*${NC}"
@@ -16,16 +16,32 @@ logo() {
     echo -e "${CYAN}*****************************************${NC}"
 }
 
+# Function to display spinner
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
 # Function to install K6 if not installed
 install_k6_if_needed() {
     if ! command -v k6 &> /dev/null; then
         echo -e "${YELLOW}K6 is not installed. Installing K6...${NC}"
-        sudo gpg -k > /dev/null 2>&1
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 > /dev/null 2>&1
-        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list > /dev/null
-        sudo apt-get update > /dev/null 2>&1
-        sudo apt-get install k6 -y > /dev/null 2>&1
-
+        (
+            sudo gpg -k > /dev/null 2>&1
+            sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 > /dev/null 2>&1
+            echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list > /dev/null
+            sudo apt-get update > /dev/null 2>&1
+            sudo apt-get install k6 -y > /dev/null 2>&1
+        ) &
+        spinner $!
         if [ $? -ne 0 ]; then
             echo -e "${RED}Error: Failed to install K6. Please install it manually and try again.${NC}"
             exit 1
@@ -186,17 +202,32 @@ EOF
 }
 
 # Function to stop an existing K6 service
-# Function to stop an existing K6 service
 stop_k6_service() {
+    local services
     local service_name
+    local service_number
+
+    services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
+    if [ -z "$services" ]; then
+        return 1
+    fi
+
     while true; do
-        read -p "Enter the name of the K6 service to stop: " service_name
-        service_name="${service_name%.service}"
-        if [ -z "$service_name" ]; then
-            echo -e "${RED}Service name cannot be empty. Please enter a valid service name.${NC}"
-        elif service_exists "$service_name"; then
-            break
+        echo -ne "Enter the ${BOLD}Number${NC} of the K6 service to stop: "
+        read service_number
+        if ! validate_integer "$service_number"; then
+            continue
         fi
+
+        service_count=$(echo "$services" | wc -l)
+        if [ "$service_number" -lt 1 ] || [ "$service_number" -gt "$service_count" ]; then
+            echo -e "${RED}Invalid service number. Please enter a number between 1 and $service_count.${NC}"
+            continue
+        fi
+
+        service_name=$(echo "$services" | sed -n "${service_number}p" | awk '{print $1}')
+        service_name="${service_name%.service}"
+        break
     done
 
     # Stop, disable, and remove the service and associated files
@@ -226,10 +257,11 @@ list_k6_services() {
         echo -e "${BLUE}|${NC}${RED}                         No active service found.              ${NC}${BLUE}|${NC}"
         echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
     else
-        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
-        echo -e "${BLUE}|${NC}   Service Name           ${BLUE}|${NC}   Status       ${BLUE}|${NC}   Active/Inactive ${BLUE}|${NC}"
-        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|${NC} No. ${BLUE}|${NC}   Service Name           ${BLUE}|${NC}   Status       ${BLUE}|${NC}   Active/Inactive  ${BLUE}|${NC}"
+        echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
 
+        counter=1
         echo "$services" | while read -r line; do
             # Remove leading special character, then parse using awk
             line=$(echo "$line" | sed 's/● //')
@@ -237,9 +269,11 @@ list_k6_services() {
             service_status=$(echo "$line" | awk '{print $4}')
             is_active=$(systemctl is-active "$service_name")
 
-            # Print the formatted output
-            printf "${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-16s${BLUE}|${NC}\n" "$service_name" "$service_status" "$is_active"
-            echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
+            # Print the formatted output with service number
+            printf "${BLUE}|${NC} %-4s${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-17s${BLUE}|${NC}\n" "$counter" "$service_name" "$service_status" "$is_active"
+            echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
+            
+            counter=$((counter + 1))
         done
     fi
 }
@@ -280,5 +314,8 @@ main_menu() {
                 ;;
         esac
     done
+}
+press_enter() {
+    read -p "Press Enter to continue..."
 }
 main_menu
