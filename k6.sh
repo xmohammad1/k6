@@ -86,14 +86,16 @@ create_k6_script_and_service() {
 
     read -p "Enter a name for the K6 service: " service_name
     service_name="${service_name%.service}"
-    # Check if service already exists
-    if service_exists $service_name; then
-        echo -e "${RED}A service with the name $service_name already exists. Please choose a different name.${NC}"
-        return
-    else
-        echo -e "${GREEN}Creating a new service with the name: $service_name${NC}"
-    fi
-
+    while true; do
+        read -p "Enter a name for the K6 service: " service_name
+        service_name="${service_name%.service}"
+        if service_exists $service_name &>/dev/null; then
+            echo -e "${RED}A service with the name $service_name already exists. Please choose a different name.${NC}"
+        else
+            echo -e "${GREEN}Creating a new service with the name: $service_name${NC}"
+            break
+        fi
+    done
     # Create the K6 script
     k6_script_path="/root/$service_name.js"
     echo -e "${GREEN}Creating K6 script at $k6_script_path${NC}"
@@ -183,7 +185,7 @@ list_k6_services() {
 
     if [ -z "$services" ]; then
         echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
-        echo "${RED}|                         No active service found.              |${NC}"
+        echo -e "${BLUE}|${NC}${RED}                         No active service found.              ${NC}${BLUE}|${NC}"
         echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
     else
         echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
