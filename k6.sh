@@ -6,6 +6,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 logo() {
@@ -112,6 +113,7 @@ create_k6_script_and_service() {
     # Install K6 if not already installed
     install_k6_if_needed
     # Ask user for inputs with validation
+    echo -e "${BLUE}=== Create New K6 Load Test ===${NC}\n"
     while true; do
         echo -ne "Enter ${BOLD}Number${NC} of Virtual Users: "
         read vus
@@ -224,7 +226,7 @@ stop_k6_service() {
     local services
     local service_name
     local service_number
-
+    echo -e "\n${BLUE}=== Stop K6 Load Test ===${NC}"
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
     if [ -z "$services" ]; then
         return 1
@@ -266,6 +268,7 @@ stop_k6_service() {
 }
 # Function to list all K6 services
 list_k6_services() {
+    echo -e "${BLUE}=== Active K6 Load Tests ===${NC}\n"
     # List only units matching 'K6 Load Test Service' and remove empty lines
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
 
@@ -287,7 +290,7 @@ list_k6_services() {
             is_active=$(systemctl is-active "$service_name.service")
 
             # Print the formatted output with service number
-            printf "${BLUE}|${NC} %-4s${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-17s${BLUE}|${NC}\n" "$counter" "$service_name" "$service_status" "$is_active"
+            printf "${BLUE}|${NC}  ${MAGENTA}%-3s${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-17s${BLUE}|${NC}\n" "$counter" "$service_name" "$service_status" "$is_active"
             echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
             
             counter=$((counter + 1))
