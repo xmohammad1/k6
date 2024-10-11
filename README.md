@@ -63,4 +63,3 @@ This project is [MIT](https://choosealicense.com/licenses/mit/) licensed.
 ## Acknowledgments
 
 - [K6 Load Testing Tool](https://k6.io/)
-- All contributors to this project
