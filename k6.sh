@@ -267,11 +267,11 @@ list_k6_services() {
 
         counter=1
         echo "$services" | while read -r line; do
-            # Remove leading special character, then parse using awk
+            # Remove leading special character, parse using awk, and remove ".service" from service name
             line=$(echo "$line" | sed 's/● //')
-            service_name=$(echo "$line" | awk '{print $1}')
+            service_name=$(echo "$line" | awk '{print $1}' | sed 's/\.service$//')
             service_status=$(echo "$line" | awk '{print $4}')
-            is_active=$(systemctl is-active "$service_name")
+            is_active=$(systemctl is-active "$service_name.service")
 
             # Print the formatted output with service number
             printf "${BLUE}|${NC} %-4s${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-17s${BLUE}|${NC}\n" "$counter" "$service_name" "$service_status" "$is_active"
