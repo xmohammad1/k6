@@ -110,22 +110,26 @@ create_k6_script_and_service() {
     install_k6_if_needed
     # Ask user for inputs with validation
     while true; do
-        read -p "Enter number of VUs: " vus
+        echo -ne "Enter ${BOLD}Number${NC} of Virtual Users: "
+        read vus
         validate_integer $vus && break
     done
 
     while true; do
-        read -p "Enter duration (e.g., 30s, 1m, 1h): " duration
+        echo -ne "Enter ${BOLD}Duration${NC} (e.g. 1m, 1h, 1d): "
+        read duration
         validate_duration $duration && break
     done
 
     while true; do
-        read -p "Enter target URL: " url
+        echo -ne "Enter target ${BOLD}URL${NC}: "
+        read url
         validate_url $url && break
     done
 
     while true; do
-        read -p "Enter a name for the K6 service: " service_name
+        echo -ne "Enter a ${BOLD}Name${NC} for the K6 service: "
+        read service_name
         service_name="${service_name%.service}"
         if [ -z "$service_name" ]; then
             echo -e "${RED}Service name cannot be empty. Please enter a valid service name.${NC}"
@@ -292,15 +296,18 @@ main_menu() {
 
         case $choice in
             1)
+                clear
                 create_k6_script_and_service
                 press_enter
                 ;;
             2)
+                clear
                 list_k6_services
                 stop_k6_service
                 press_enter
                 ;;
             3)
+                clear
                 list_k6_services
                 press_enter
                 ;;
