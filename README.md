@@ -1,10 +1,7 @@
-
-
-<p align="center">
-  <img src="https://dashboard.snapcraft.io/site_media/appmedia/2022/03/K6-logo_1.jpg.png" alt="K6 Load Testing Tool Logo" width="200"/>
-</p>
-
-# K6 Load Testing Management Tool
+<h1 align="center">
+  <img src="https://dashboard.snapcraft.io/site_media/appmedia/2022/03/K6-logo_1.jpg.png" alt="K6 Load Testing Tool Logo" width="35"/>
+  K6 Load Testing Management Tool
+</h1>
 
 ## Overview
 
