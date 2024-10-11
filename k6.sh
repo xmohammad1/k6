@@ -15,7 +15,6 @@ logo() {
     echo -e "${CYAN}*${NC}                                       ${CYAN}*${NC}"
     echo -e "${CYAN}*****************************************${NC}"
 }
-
 # Function to display spinner
 spinner() {
     local pid=$1
@@ -49,7 +48,6 @@ install_k6_if_needed() {
         echo -e "${GREEN}K6 installed successfully.${NC}"
     fi
 }
-
 # Function to validate if a number is an integer
 validate_integer() {
     if ! [[ "$1" =~ ^[0-9]+$ ]]; then
@@ -58,7 +56,6 @@ validate_integer() {
     fi
     return 0
 }
-
 # Function to validate duration format
 validate_duration() {
     if ! [[ "$1" =~ ^[0-9]+(s|m|h|d)$ ]]; then
@@ -67,7 +64,6 @@ validate_duration() {
     fi
     return 0
 }
-
 # Function to validate URL
 validate_url() {
     if ! [[ "$1" =~ ^http(s)?:// ]]; then
@@ -76,7 +72,6 @@ validate_url() {
     fi
     return 0
 }
-
 # Function to validate if a service exists
 service_exists() {
     if systemctl status "$1.service" &> /dev/null; then
@@ -85,6 +80,14 @@ service_exists() {
         echo -e "${RED}Service '$1' does not exist.${NC}"
         return 1
     fi
+}
+# Function to check if input contains spaces
+validate_no_spaces() {
+    if [[ "$1" =~ [[:space:]] ]]; then
+        echo -e "${RED}Error: Input cannot contain spaces.${NC}"
+        return 1
+    fi
+    return 0
 }
 # Function to convert duration to seconds
 duration_to_seconds() {
@@ -112,24 +115,36 @@ create_k6_script_and_service() {
     while true; do
         echo -ne "Enter ${BOLD}Number${NC} of Virtual Users: "
         read vus
+        if ! validate_no_spaces "$vus"; then
+            continue
+        fi
         validate_integer $vus && break
     done
 
     while true; do
         echo -ne "Enter ${BOLD}Duration${NC} (e.g. 1m, 1h, 1d): "
         read duration
+        if ! validate_no_spaces "$duration"; then
+            continue
+        fi
         validate_duration $duration && break
     done
 
     while true; do
         echo -ne "Enter target ${BOLD}URL${NC}: "
         read url
+        if ! validate_no_spaces "$url"; then
+            continue
+        fi
         validate_url $url && break
     done
 
     while true; do
         echo -ne "Enter a ${BOLD}Name${NC} for the K6 service: "
         read service_name
+        if ! validate_no_spaces "$service_name"; then
+            continue
+        fi
         service_name="${service_name%.service}"
         if [ -z "$service_name" ]; then
             echo -e "${RED}Service name cannot be empty. Please enter a valid service name.${NC}"
@@ -204,7 +219,6 @@ EOF
     systemd-run --quiet --on-active="$seconds" /bin/sh -c "systemctl stop $service_name.service > /dev/null 2>&1 && systemctl disable $service_name.service > /dev/null 2>&1 && rm -f $service_file > /dev/null 2>&1 && rm -f $k6_script_path > /dev/null 2>&1 && systemctl daemon-reload > /dev/null 2>&1"
     echo -e "${GREEN}Service $service_name scheduled to stop and disable after $duration.${NC}"
 }
-
 # Function to stop an existing K6 service
 stop_k6_service() {
     local services
@@ -250,7 +264,6 @@ stop_k6_service() {
     echo -e "${GREEN}K6 service '$service_name' stopped and disabled successfully.${NC}"
     return 0
 }
-
 # Function to list all K6 services
 list_k6_services() {
     # List only units matching 'K6 Load Test Service' and remove empty lines
@@ -281,7 +294,6 @@ list_k6_services() {
         done
     fi
 }
-
 main_menu() {
     while true; do
         clear
