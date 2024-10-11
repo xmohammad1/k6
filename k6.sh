@@ -306,7 +306,7 @@ main_menu() {
         echo -e "${CYAN}2)${NC} Remove an existing K6 service"
         echo -e "${CYAN}3)${NC} List all K6 services"
         echo -e "${CYAN}4)${NC} Exit"
-        echo -e "${BLUE}------------------------------------${NC}"
+        echo -e ""
         read -p "Enter your choice (1-4): " choice
 
         case $choice in
@@ -338,6 +338,7 @@ main_menu() {
     done
 }
 press_enter() {
-    read -p "Press Enter to continue..."
+    echo -ne "${GREEN}Press Enter to continue...${NC}"
+    read
 }
 main_menu
