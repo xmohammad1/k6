@@ -384,7 +384,8 @@ main_menu() {
         echo -e "${CYAN}1)${NC} Create a new K6 script and service"
         echo -e "${CYAN}2)${NC} Remove an existing K6 service"
         echo -e "${CYAN}3)${NC} List all K6 services"
-        echo -e "${CYAN}4)${NC} Exit"
+         echo -e "${CYAN}4)${NC} Swap Management "
+        echo -e "${CYAN}5)${NC} Exit"
         echo -e ""
         read -p "Enter your choice (1-4): " choice
 
@@ -406,6 +407,9 @@ main_menu() {
                 press_enter
                 ;;
             4)
+                bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/make_swap/refs/heads/main/swap.sh)
+                ;;
+            5)
                 echo -e "${GREEN}Thank you for using the K6 Load Testing Management Tool. Goodbye!${NC}"
                 exit 0
                 ;;
