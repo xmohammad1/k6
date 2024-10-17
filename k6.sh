@@ -273,20 +273,42 @@ extract_k6_info() {
     local vus=$(grep "vus:" "$script_path" | sed -n "s/.*vus: \([0-9]*\).*/\1/p")
     echo "$domain|$vus"
 }
+calculate_remaining_time() {
+    local service_name=$1
+    local start_time=$(systemctl show -p ActiveEnterTimestamp --value "$service_name.service" | xargs -I{} date +%s -d {})
+    local current_time=$(date +%s)
+    local duration=$(grep "duration:" "/root/$service_name.js" | sed -n "s/.*duration: '\(.*\)'.*/\1/p")
+    
+    local total_seconds=$(duration_to_seconds "$duration")
+    local elapsed_seconds=$((current_time - start_time))
+    local remaining_seconds=$((total_seconds - elapsed_seconds))
 
-# Updated list_k6_services function (without Duration column)
+    if [ $remaining_seconds -le 0 ]; then
+        echo "Stopping"
+    else
+        if [ $remaining_seconds -ge 86400 ]; then
+            echo "$((remaining_seconds / 86400))d left"
+        elif [ $remaining_seconds -ge 3600 ]; then
+            echo "$((remaining_seconds / 3600))h left"
+        elif [ $remaining_seconds -ge 60 ]; then
+            echo "$((remaining_seconds / 60))m left"
+        else
+            echo "${remaining_seconds}s left"
+        fi
+    fi
+}
 list_k6_services() {
     echo -e "${BLUE}=== Active K6 Load Tests ===${NC}\n"
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
 
     if [ -z "$services" ]; then
-        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
-        echo -e "${BLUE}|${NC}${RED}                       No active service found.                            ${NC}${BLUE}|${NC}"
-        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|------------------------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|${NC}${RED}                              No active service found.                                  ${NC}${BLUE}|${NC}"
+        echo -e "${BLUE}|------------------------------------------------------------------------------------------|${NC}"
     else
-        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
-        echo -e "${BLUE}|${NC} No. ${BLUE}|${NC} Service Name ${BLUE}|${NC} Status   ${BLUE}|${NC}  Domain/IP     ${BLUE}|${NC} VUs    ${BLUE}|${NC} Active/Inactive ${BLUE}|${NC}"
-        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|-----------------------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|${NC} No.${BLUE}|${NC} Service Name ${BLUE}|${NC} Status   ${BLUE}|${NC} Domain/IP        ${BLUE}|${NC} VUs    ${BLUE}|${NC} Active/Inactive ${BLUE}|${NC} Remaining  ${BLUE}|${NC}"
+        echo -e "${BLUE}|-----------------------------------------------------------------------------------------|${NC}"
 
         counter=1
         echo "$services" | while read -r line; do
@@ -299,10 +321,13 @@ list_k6_services() {
             k6_info=$(extract_k6_info "$service_name")
             IFS='|' read -r domain vus <<< "$k6_info"
 
+            # Calculate remaining time
+            remaining_time=$(calculate_remaining_time "$service_name")
+
             # Print the formatted output with all information
-            printf "${BLUE}|${NC} ${MAGENTA}%-4s${BLUE}|${NC} %-12s ${BLUE}|${NC} %-8s ${BLUE}|${NC}  %-13s ${BLUE}|${NC} %-6s ${BLUE}|${NC} %-14s  ${BLUE}|${NC}\n" \
-                   "$counter" "$service_name" "$service_status" "$domain" "$vus" "$is_active"
-            echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
+            printf "${BLUE}|${NC} ${MAGENTA}%-3s${BLUE}|${NC} %-12s ${BLUE}|${NC} %-8s ${BLUE}|${NC} %-16s ${BLUE}|${NC} %-6s ${BLUE}|${NC} %-14s  ${BLUE}|${NC} %-10s ${BLUE}|${NC}\n" \
+                   "$counter" "$service_name" "$service_status" "$domain" "$vus" "$is_active" "$remaining_time"
+            echo -e "${BLUE}|-----------------------------------------------------------------------------------------|${NC}"
             
             counter=$((counter + 1))
         done
