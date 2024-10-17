@@ -9,12 +9,55 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
+# Function to format bytes to human readable format
+# Function to format bytes to human readable format
+format_bytes() {
+    local bytes=$1
+    if [ $bytes -ge 1073741824 ]; then
+        echo "$(awk "BEGIN {printf \"%.1f\", $bytes/1073741824}")GB"
+    elif [ $bytes -ge 1048576 ]; then
+        echo "$(awk "BEGIN {printf \"%d\", $bytes/1048576}")MB"
+    else
+        echo "$(awk "BEGIN {printf \"%d\", $bytes/1024}")KB"
+    fi
+}
+
+# Function to get memory information
+get_memory_info() {
+    # Get memory information
+    local mem_info=$(free -b)
+    
+    # RAM information
+    local ram_total=$(echo "$mem_info" | awk '/Mem:/ {print $2}')
+    local ram_used=$(echo "$mem_info" | awk '/Mem:/ {print $3}')
+    local ram_free=$(echo "$mem_info" | awk '/Mem:/ {print $4}')
+    
+    # Swap information
+    local swap_total=$(echo "$mem_info" | awk '/Swap:/ {print $2}')
+    local swap_used=$(echo "$mem_info" | awk '/Swap:/ {print $3}')
+    local swap_free=$(echo "$mem_info" | awk '/Swap:/ {print $4}')
+    
+    # Format all values to human readable format
+    local ram_total_h=$(format_bytes $ram_total)
+    local ram_used_h=$(format_bytes $ram_used)
+    local ram_free_h=$(format_bytes $ram_free)
+    local swap_total_h=$(format_bytes $swap_total)
+    local swap_used_h=$(format_bytes $swap_used)
+    local swap_free_h=$(format_bytes $swap_free)
+
+    echo -e "${BLUE}Memory Usage${NC}"
+    printf "RAM:  %-12s Free: %s\n" "$ram_used_h/$ram_total_h" "$ram_free_h"
+    printf "Swap: %-12s Free: %s\n" "$swap_used_h/$swap_total_h" "$swap_free_h"
+}
 logo() {
     echo -e "${CYAN}*****************************************${NC}"
     echo -e "${CYAN}*${NC}                                       ${CYAN}*${NC}"
     echo -e "${CYAN}*${NC}          ${GREEN}M U H A M M A D${NC}              ${CYAN}*${NC}"
     echo -e "${CYAN}*${NC}                                       ${CYAN}*${NC}"
     echo -e "${CYAN}*****************************************${NC}"
+    echo
+    get_memory_info
+    echo
 }
 # Function to display spinner
 spinner() {
@@ -302,9 +345,9 @@ list_k6_services() {
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
 
     if [ -z "$services" ]; then
-        echo -e "${BLUE}|------------------------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|----------------------------------------------------------------------------------------|${NC}"
         echo -e "${BLUE}|${NC}${RED}                              No active service found.                                  ${NC}${BLUE}|${NC}"
-        echo -e "${BLUE}|------------------------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|----------------------------------------------------------------------------------------|${NC}"
     else
         echo -e "${BLUE}|-----------------------------------------------------------------------------------------|${NC}"
         echo -e "${BLUE}|${NC} No.${BLUE}|${NC} Service Name ${BLUE}|${NC} Status   ${BLUE}|${NC} Domain/IP        ${BLUE}|${NC} VUs    ${BLUE}|${NC} Active/Inactive ${BLUE}|${NC} Remaining  ${BLUE}|${NC}"
