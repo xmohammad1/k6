@@ -266,32 +266,43 @@ stop_k6_service() {
     echo -e "${GREEN}K6 service '$service_name' stopped and disabled successfully.${NC}"
     return 0
 }
-# Function to list all K6 services
+extract_k6_info() {
+    local script_path="/root/$1.js"
+    local full_url=$(grep "http.get(" "$script_path" | sed -n "s/.*http.get('\(.*\)'.*/\1/p")
+    local domain=$(echo "$full_url" | awk -F[/:] '{print $4}')
+    local vus=$(grep "vus:" "$script_path" | sed -n "s/.*vus: \([0-9]*\).*/\1/p")
+    echo "$domain|$vus"
+}
+
+# Updated list_k6_services function (without Duration column)
 list_k6_services() {
     echo -e "${BLUE}=== Active K6 Load Tests ===${NC}\n"
-    # List only units matching 'K6 Load Test Service' and remove empty lines
     services=$(systemctl list-units --type=service --all --no-pager | grep 'K6 Load Test Service')
 
     if [ -z "$services" ]; then
-        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
-        echo -e "${BLUE}|${NC}${RED}                         No active service found.              ${NC}${BLUE}|${NC}"
-        echo -e "${BLUE}|---------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|${NC}${RED}                       No active service found.                            ${NC}${BLUE}|${NC}"
+        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
     else
-        echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
-        echo -e "${BLUE}|${NC} No. ${BLUE}|${NC}   Service Name           ${BLUE}|${NC}   Status       ${BLUE}|${NC}   Active/Inactive  ${BLUE}|${NC}"
-        echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
+        echo -e "${BLUE}|${NC} No. ${BLUE}|${NC} Service Name ${BLUE}|${NC} Status   ${BLUE}|${NC}  Domain/IP     ${BLUE}|${NC} VUs    ${BLUE}|${NC} Active/Inactive ${BLUE}|${NC}"
+        echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
 
         counter=1
         echo "$services" | while read -r line; do
-            # Remove leading special character, parse using awk, and remove ".service" from service name
             line=$(echo "$line" | sed 's/● //')
             service_name=$(echo "$line" | awk '{print $1}' | sed 's/\.service$//')
             service_status=$(echo "$line" | awk '{print $4}')
             is_active=$(systemctl is-active "$service_name.service")
 
-            # Print the formatted output with service number
-            printf "${BLUE}|${NC}  ${MAGENTA}%-3s${BLUE}|${NC}   %-23s${BLUE}|${NC}   %-13s${BLUE}|${NC}   %-17s${BLUE}|${NC}\n" "$counter" "$service_name" "$service_status" "$is_active"
-            echo -e "${BLUE}|----------------------------------------------------------------------|${NC}"
+            # Extract information from K6 script
+            k6_info=$(extract_k6_info "$service_name")
+            IFS='|' read -r domain vus <<< "$k6_info"
+
+            # Print the formatted output with all information
+            printf "${BLUE}|${NC} ${MAGENTA}%-4s${BLUE}|${NC} %-12s ${BLUE}|${NC} %-8s ${BLUE}|${NC}  %-13s ${BLUE}|${NC} %-6s ${BLUE}|${NC} %-14s  ${BLUE}|${NC}\n" \
+                   "$counter" "$service_name" "$service_status" "$domain" "$vus" "$is_active"
+            echo -e "${BLUE}|---------------------------------------------------------------------------|${NC}"
             
             counter=$((counter + 1))
         done
