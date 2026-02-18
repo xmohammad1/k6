@@ -24,7 +24,7 @@ The K6 Load Testing Management Tool is a bash script that simplifies the process
 ## Usage
 
 ```bash
-bash <(curl -u xmohammad1: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 -LS https://raw.githubusercontent.com/xmohammad1/k6/refs/heads/main/k6.sh)
+bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/k6/refs/heads/main/k6.sh)
 ```
 
 Follow the on-screen prompts to:
